@@ -2,11 +2,13 @@ import pygame
 import asyncio
 import os
 from gradio_client import Client
+from dotenv import load_dotenv
 
 # --- 1. เชื่อมต่อ Server ครั้งเดียว (อยู่นอกฟังก์ชันเพื่อความเร็ว) ---
 print("🔌 กำลังเชื่อมต่อกับ Moe TTS...")
 try:
-    client = Client("Moe-tts/")
+    load_dotenv()
+    TTS_URL = os.getenv("Moe_tts")
     print("✅ เชื่อมต่อสำเร็จ!")
 except Exception as e:
     print(f"❌ เชื่อมต่อไม่ได้: {e}")
