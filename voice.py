@@ -5,7 +5,6 @@ import contextlib
 from gradio_client import Client
 from dotenv import load_dotenv
 
-<<<<<<< HEAD
 load_dotenv()
 TTS_URL = os.getenv("Moe_tts")
 client = None
@@ -18,17 +17,6 @@ if TTS_URL:
     except Exception:
        
         client = None
-=======
-# --- 1. เชื่อมต่อ Server ครั้งเดียว (อยู่นอกฟังก์ชันเพื่อความเร็ว) ---
-print("🔌 กำลังเชื่อมต่อกับ Moe TTS...")
-try:
-    load_dotenv()
-    TTS_URL = os.getenv("Moe_tts")
-    print("✅ เชื่อมต่อสำเร็จ!")
-except Exception as e:
-    print(f"❌ เชื่อมต่อไม่ได้: {e}")
-    client = None
->>>>>>> c3f497d452e11128ea59a67bcd563743bc010654
 
 async def speak(text):
     if client is None:
