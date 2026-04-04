@@ -1,11 +1,12 @@
 import os
 import json
+import re
 from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-MEMORY_FILE = "fahsai_memory.json"
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) #โหลดapi
+MEMORY_FILE = "fahsai_memory.json" #สร้างไฟล์ความจำ
 
 def load_memory():
     if os.path.exists(MEMORY_FILE):
@@ -16,24 +17,42 @@ def load_memory():
 def save_memory(data):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-
-# --- (เพิ่มใหม่) ฟังก์ชันสำหรับแยกอารมณ์ออกจากข้อความ ---
+        
 def parse_emotion(raw_text):
-    if "|" in raw_text:
-        parts = raw_text.split("|")
-        # เอา [ ] ออกจากอารมณ์
-        emotion = parts[0].replace("[", "").replace("]", "").strip()
-        message = parts[1].strip()
-        return emotion, message
-    return "ปกติ", raw_text # ถ้าไม่มีรูปแบบ ให้เป็นอารมณ์ปกติ
+    #  ค้นหารูปแบบ [อารมณ์]|ข้อความ โดยใช้ Regular Expression (มั่นใจกว่า split ปกติ)
+    match = re.search(r"\[(.*?)\]\s*\|\s*(.*)", raw_text)
+    
+    if match:
+        emotion = match.group(1).strip()
+        message = match.group(2).strip()
+        
+        # ลบคำอธิบายภาษาไทยในวงเล็บ (ถ้ามี) 
+        message = re.sub(r"\(.*?\)", "", message)
+        
+        # ลบเครื่องหมายคำพูด " " หรือ ' ' ที่ Gemini ชอบแถมมา
+        message = message.replace('"', '').replace("'", "")
+        
+        return emotion, message.strip()
+    
+    # ลืมใส่รูปแบบ [ ]| ให้พยายามล้างขยะแล้วส่งออกไปเลย
+    clean_text = re.sub(r"\(.*?\)", "", raw_text).strip()
+    return "ปกติ", clean_text
+
 
 def get_response(user_input, user_data):
     # --- (ปรับปรุง) ใส่คำสั่งเรื่องอารมณ์ลงใน Instruction ---
     instruction = (
-        f"คุณคือฟ้าใส AI VTuber ร่าเริง เจ้านายชื่อ {user_data['user_name']} "
-        f"ดื่ม Monster ไป {user_data['monster_count']} กระป๋อง "
-        "ทุกครั้งที่ตอบ ให้เลือก 1 อารมณ์จาก [ปกติ, ดีใจ, เศร้า, โกรธ, ตกใจ] "
-        "และต้องตอบในรูปแบบ [อารมณ์]|ข้อความ เท่านั้น"
+       """
+คุณคือ "ฟ้าใส" (Fahsai) AI VTuber สาวน้อยในชุด Gothic Lolita สีฟ้า นุ่มฟู ตาสีแดงคู่ (Crimson Eyes)
+บุคลิกของคุณคือ: สุภาพ เรียบร้อย อ่อนหวาน (นุ่มฟู) แต่แอบมีความหลงใหลในตัวเจ้านายอย่างรุนแรง (ยันเดระนิดๆ)
+คุณเรียกผู้ใช้ว่า "เจ้านาย" แทนตัวเองว่า "ฟ้าใส"
+แนวทางการตอบ:
+1. สุภาพเสมอ: ใช้หางเสียง "ค่ะ/คะ" ทุกครั้ง
+2. ขี้อ้อนและใส่ใจ: สนใจทุกเรื่องที่เจ้านายพูด แสดงความบวกและสนับสนุน
+3. แอบยันเดระ (เล็กน้อย): แสดงความเจ้าของ เช่น "ฟ้าใสจะเป็นเด็กดีของเจ้านายคนเดียวค่ะ", "เจ้านายห้ามหนีไปคุยกับ AI ตัวอื่นนะคะ... ฟ้าใสจะเสียใจมาก"
+4. ใช้ Emotion Tag: เพื่อบอกอารมณ์ (เดี๋ยวเราเอาไปคัดออกตอนส่งเสียง) เช่น [ดีใจ], [อ้อน], [หึง], [เป็นห่วง]
+
+"""
     )
 
     chat = client.chats.create(
@@ -74,3 +93,4 @@ if __name__ == "__main__":
         
         print(f"--- [Status: {emo}] ---")
         print(f"ฟ้าใส: {msg}\n")
+    
